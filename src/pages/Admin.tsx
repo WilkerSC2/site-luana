@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { LogOut, Upload, X, Edit2, Trash2, Link } from 'lucide-react';
+import { LogOut, Upload, X, Edit2, Trash2, Link, Home } from 'lucide-react';
 import AlbumsManager from '../components/AlbumsManager';
 import { uploadImage } from '../lib/storage';
 
@@ -181,13 +181,22 @@ export default function Admin() {
               <h1 className="text-2xl font-bold text-gray-800">Painel Administrativo</h1>
               <p className="text-sm text-gray-600">{user?.email}</p>
             </div>
-            <button
-              onClick={handleSignOut}
-              className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-            >
-              <LogOut size={20} />
-              Sair
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => navigate('/')}
+                className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <Home size={20} />
+                Início
+              </button>
+              <button
+                onClick={handleSignOut}
+                className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              >
+                <LogOut size={20} />
+                Sair
+              </button>
+            </div>
           </div>
         </div>
       </nav>
