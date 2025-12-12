@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { signIn } = useAuth();
@@ -16,7 +17,7 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const { error } = await signIn(email, password);
+      const { error } = await signIn(email, password, rememberMe);
 
       if (error) {
         setError(error.message);
@@ -72,6 +73,19 @@ export default function Login() {
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
               placeholder="••••••••"
             />
+          </div>
+
+          <div className="flex items-center">
+            <input
+              id="remember"
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded cursor-pointer"
+            />
+            <label htmlFor="remember" className="ml-2 block text-sm text-gray-700 cursor-pointer">
+              Lembrar-me neste dispositivo
+            </label>
           </div>
 
           {error && (
