@@ -2,14 +2,6 @@ import React, { useState, useEffect } from 'react';
 import BeforeAfterSlider from './BeforeAfterSlider';
 import { supabase } from '../lib/supabase';
 
-interface BeforeAfterImage {
-  id: string;
-  title: string;
-  description: string | null;
-  image_url: string;
-  category: string;
-}
-
 const MuseuEditSection = () => {
   const [beforeImage, setBeforeImage] = useState<string>('');
   const [afterImage, setAfterImage] = useState<string>('');
@@ -23,7 +15,7 @@ const MuseuEditSection = () => {
     setLoading(true);
     const { data, error } = await supabase
       .from('portfolio_images')
-      .select('*')
+      .select('image_url')
       .eq('category', 'before-after')
       .order('order_index', { ascending: true })
       .limit(2);

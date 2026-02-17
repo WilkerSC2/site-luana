@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { LogOut, Upload, X, Edit2, Trash2, Link, Home } from 'lucide-react';
 import AlbumsManager from '../components/AlbumsManager';
-import { uploadImage } from '../lib/storage';
+import { ensureImageVariants, uploadImage } from '../lib/storage';
 
 interface PortfolioImage {
   id: string;
@@ -33,6 +33,8 @@ export default function Admin() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [draggedImageId, setDraggedImageId] = useState<string | null>(null);
+  const [generatingVariants, setGeneratingVariants] = useState(false);
+  const [variantsProgress, setVariantsProgress] = useState<{ done: number; total: number } | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -46,13 +48,43 @@ export default function Admin() {
     setLoading(true);
     const { data, error } = await supabase
       .from('portfolio_images')
-      .select('*')
+      .select('id,title,description,image_url,category,order_index')
       .order('order_index', { ascending: true });
 
     if (!error && data) {
       setImages(data);
     }
     setLoading(false);
+  };
+
+  const generatePortfolioVariants = async () => {
+    if (generatingVariants) return;
+    if (!images.length) return;
+
+    if (!confirm('Isso vai gerar miniaturas (thumb/display) no Supabase para as imagens do portfólio. Continuar?')) {
+      return;
+    }
+
+    setGeneratingVariants(true);
+    const candidates = images
+      .map((img) => img.image_url)
+      .filter((url) => url.includes('/storage/v1/object/public/portfolio-images/'));
+
+    setVariantsProgress({ done: 0, total: candidates.length });
+
+    try {
+      for (let i = 0; i < candidates.length; i++) {
+        await ensureImageVariants(candidates[i]);
+        setVariantsProgress({ done: i + 1, total: candidates.length });
+      }
+      alert('Miniaturas geradas.');
+    } catch (error) {
+      console.error(error);
+      alert('Falha ao gerar miniaturas. Veja o console.');
+    } finally {
+      setGeneratingVariants(false);
+      setTimeout(() => setVariantsProgress(null), 1500);
+    }
   };
 
   const handleSignOut = async () => {
@@ -231,18 +263,36 @@ export default function Admin() {
           <>
             <div className="flex justify-between items-center mb-8">
               <h2 className="text-2xl font-bold text-gray-800">Gerenciar Imagens do Portfólio</h2>
-              <button
-                onClick={() => {
-                  setEditingImage(null);
-                  setUploadForm({ title: '', description: '', image_url: '', category: 'portfolio' });
-                  setShowUploadModal(true);
-                }}
-                className="flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-              >
-                <Upload size={20} />
-                Adicionar Imagem
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={generatePortfolioVariants}
+                  disabled={generatingVariants || loading || images.length === 0}
+                  className="flex items-center gap-2 px-4 py-3 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-60"
+                >
+                  <Upload size={18} />
+                  {generatingVariants ? 'Gerando...' : 'Gerar Miniaturas'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingImage(null);
+                    setUploadForm({ title: '', description: '', image_url: '', category: 'portfolio' });
+                    setShowUploadModal(true);
+                  }}
+                  className="flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                >
+                  <Upload size={20} />
+                  Adicionar Imagem
+                </button>
+              </div>
             </div>
+
+            {variantsProgress && (
+              <p className="text-sm text-gray-600 mb-6">
+                Miniaturas: {variantsProgress.done}/{variantsProgress.total}
+              </p>
+            )}
 
         {loading ? (
           <div className="text-center py-12">
@@ -266,6 +316,8 @@ export default function Admin() {
                   <img
                     src={image.image_url}
                     alt={image.title}
+                    loading="lazy"
+                    decoding="async"
                     className="w-full h-full object-cover"
                   />
                 </div>
