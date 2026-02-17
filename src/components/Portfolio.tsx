@@ -17,6 +17,7 @@ const Portfolio = () => {
   const gridRef = useRef<HTMLDivElement>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [lightboxDisplayLoaded, setLightboxDisplayLoaded] = useState(false);
   const [images, setImages] = useState<PortfolioImage[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -45,6 +46,12 @@ const Portfolio = () => {
     category: img.category,
     title: img.title
   }));
+
+  useEffect(() => {
+    if (!selectedImage) return;
+    setLightboxDisplayLoaded(false);
+  }, [selectedImage]);
+
   useEffect(() => {
     if (!selectedImage) return;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -151,17 +158,39 @@ const Portfolio = () => {
               >
                 <X size={28} className="md:w-10 md:h-10 w-7 h-7" />
               </button>
+              <div className="relative w-full max-w-[95vw] h-[80vh]">
+                <OptimizedImage
+                  src={selectedImage}
+                  alt=""
+                  aria-hidden="true"
+                  loading="eager"
+                  decoding="async"
+                  variant="thumb"
+                  widths={[600, 900, 1200]}
+                  sizes="100vw"
+                  quality={70}
+                  className={`absolute inset-0 w-full h-full object-contain transition-opacity duration-300 ${
+                    lightboxDisplayLoaded ? 'opacity-0' : 'opacity-100'
+                  }`}
+                />
               <OptimizedImage
                 src={selectedImage}
                 alt="Imagem do portfÃ³lio"
                 loading="eager"
                 decoding="async"
+                preferRender
                 variant="display"
                 widths={[1200, 1600, 2000]}
                 sizes="100vw"
                 quality={85}
-                style={{ width: 'auto', height: 'auto', maxWidth: '100vw', maxHeight: '80vh' }}
+                // @ts-expect-error fetchPriority is supported in modern browsers but may not exist in older TS DOM typings
+                fetchPriority="high"
+                onLoad={() => setLightboxDisplayLoaded(true)}
+                className={`absolute inset-0 w-full h-full object-contain transition-opacity duration-300 ${
+                  lightboxDisplayLoaded ? 'opacity-100' : 'opacity-0'
+                }`}
               />
+              </div>
               {/* Setas abaixo da imagem no mobile, laterais no desktop */}
               <div className="flex w-full justify-center items-center mt-4 md:mt-0 md:absolute md:top-1/2 md:left-0 md:right-0 md:justify-between">
                 {selectedIndex !== null && selectedIndex > 0 && (
