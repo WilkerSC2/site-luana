@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { X, ChevronLeft, ChevronRight, ArrowLeft } from 'lucide-react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { ArrowLeft, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import OptimizedImage from './OptimizedImage';
 
@@ -15,15 +15,104 @@ interface AlbumViewerProps {
   onClose: () => void;
 }
 
+const DESKTOP_PAGE_SIZE = 12;
+const MOBILE_PAGE_SIZE = 6;
+
 export default function AlbumViewer({ albumId, albumTitle, onClose }: AlbumViewerProps) {
+  const latestAlbumIdRef = useRef(albumId);
+  const [pageSize, setPageSize] = useState(DESKTOP_PAGE_SIZE);
   const [photos, setPhotos] = useState<AlbumPhoto[]>([]);
+  const [totalCount, setTotalCount] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
   useEffect(() => {
-    loadPhotos();
+    latestAlbumIdRef.current = albumId;
   }, [albumId]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+
+    const mq = window.matchMedia('(max-width: 640px)');
+    const apply = () => setPageSize(mq.matches ? MOBILE_PAGE_SIZE : DESKTOP_PAGE_SIZE);
+    apply();
+
+    // Safari fallback
+    const handler = () => apply();
+    if (typeof mq.addEventListener === 'function') {
+      mq.addEventListener('change', handler);
+      return () => mq.removeEventListener('change', handler);
+    }
+    // eslint-disable-next-line deprecation/deprecation
+    mq.addListener(handler);
+    // eslint-disable-next-line deprecation/deprecation
+    return () => mq.removeListener(handler);
+  }, []);
+
+  const loadFirstPage = useCallback(async () => {
+    const albumIdAtCall = albumId;
+    setLoading(true);
+    setLoadingMore(false);
+    setHasMore(false);
+    setTotalCount(null);
+    setPhotos([]);
+    setCurrentIndex(0);
+    setIsLightboxOpen(false);
+
+    const { data, error, count } = await supabase
+      .from('album_photos')
+      .select('id,photo_url,order_index', { count: 'exact' })
+      .eq('album_id', albumIdAtCall)
+      .order('order_index', { ascending: true })
+      .range(0, pageSize - 1);
+
+    if (latestAlbumIdRef.current !== albumIdAtCall) return;
+
+    if (!error && data) {
+      setPhotos(data);
+      setTotalCount(typeof count === 'number' ? count : null);
+      setHasMore(typeof count === 'number' ? data.length < count : data.length === pageSize);
+    }
+
+    setLoading(false);
+  }, [albumId, pageSize]);
+
+  const loadMore = useCallback(async () => {
+    if (loading || loadingMore || !hasMore) return;
+
+    const albumIdAtCall = albumId;
+    setLoadingMore(true);
+
+    const from = photos.length;
+    const to = from + pageSize - 1;
+
+    const { data, error } = await supabase
+      .from('album_photos')
+      .select('id,photo_url,order_index')
+      .eq('album_id', albumIdAtCall)
+      .order('order_index', { ascending: true })
+      .range(from, to);
+
+    if (latestAlbumIdRef.current !== albumIdAtCall) return;
+
+    if (!error && data && data.length > 0) {
+      const next = [...photos, ...data];
+      setPhotos(next);
+      setHasMore(data.length === pageSize && (typeof totalCount === 'number' ? next.length < totalCount : true));
+    } else {
+      setHasMore(false);
+    }
+
+    setLoadingMore(false);
+  }, [albumId, hasMore, loading, loadingMore, pageSize, photos, totalCount]);
+
+  useEffect(() => {
+    void loadFirstPage();
+  }, [loadFirstPage]);
 
   useEffect(() => {
     if (!isLightboxOpen) return;
@@ -32,8 +121,12 @@ export default function AlbumViewer({ albumId, albumTitle, onClose }: AlbumViewe
       if (e.key === 'ArrowLeft' && currentIndex > 0) {
         setCurrentIndex(currentIndex - 1);
       }
-      if (e.key === 'ArrowRight' && currentIndex < photos.length - 1) {
-        setCurrentIndex(currentIndex + 1);
+      if (e.key === 'ArrowRight') {
+        if (currentIndex < photos.length - 1) {
+          setCurrentIndex(currentIndex + 1);
+        } else if (hasMore && !loadingMore) {
+          void loadMore();
+        }
       }
       if (e.key === 'Escape') {
         setIsLightboxOpen(false);
@@ -42,21 +135,7 @@ export default function AlbumViewer({ albumId, albumTitle, onClose }: AlbumViewe
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isLightboxOpen, currentIndex, photos.length]);
-
-  const loadPhotos = async () => {
-    setLoading(true);
-    const { data, error } = await supabase
-      .from('album_photos')
-      .select('id,photo_url,order_index')
-      .eq('album_id', albumId)
-      .order('order_index', { ascending: true });
-
-    if (!error && data) {
-      setPhotos(data);
-    }
-    setLoading(false);
-  };
+  }, [currentIndex, hasMore, isLightboxOpen, loadMore, loadingMore, photos.length]);
 
   const openLightbox = (index: number) => {
     setCurrentIndex(index);
@@ -66,6 +145,8 @@ export default function AlbumViewer({ albumId, albumTitle, onClose }: AlbumViewe
   const nextPhoto = () => {
     if (currentIndex < photos.length - 1) {
       setCurrentIndex(currentIndex + 1);
+    } else if (hasMore && !loadingMore) {
+      void loadMore();
     }
   };
 
@@ -74,6 +155,8 @@ export default function AlbumViewer({ albumId, albumTitle, onClose }: AlbumViewe
       setCurrentIndex(currentIndex - 1);
     }
   };
+
+  const counterTotal = typeof totalCount === 'number' ? totalCount : photos.length;
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#0d0b14] transition-colors duration-300 pt-24 pb-16">
@@ -87,17 +170,23 @@ export default function AlbumViewer({ albumId, albumTitle, onClose }: AlbumViewe
         </button>
 
         <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-playfair text-gray-900 dark:text-white mb-4">
-            {albumTitle}
-          </h1>
+          <h1 className="text-4xl md:text-5xl font-playfair text-gray-900 dark:text-white mb-4">{albumTitle}</h1>
           <p className="text-gray-600 dark:text-gray-300">
-            {photos.length} {photos.length === 1 ? 'foto' : 'fotos'}
+            {typeof totalCount === 'number' ? (
+              <>
+                {photos.length} de {totalCount} {totalCount === 1 ? 'foto' : 'fotos'}
+              </>
+            ) : (
+              <>
+                {photos.length} {photos.length === 1 ? 'foto' : 'fotos'}
+              </>
+            )}
           </p>
         </div>
 
         {loading ? (
           <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-purple-600 border-t-transparent"></div>
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-purple-600 border-t-transparent" />
             <p className="mt-4 text-gray-600 dark:text-gray-300">Carregando fotos...</p>
           </div>
         ) : photos.length === 0 ? (
@@ -105,31 +194,44 @@ export default function AlbumViewer({ albumId, albumTitle, onClose }: AlbumViewe
             <p className="text-gray-600 dark:text-gray-300">Nenhuma foto neste álbum.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {photos.map((photo, index) => (
-              <div
-                key={photo.id}
-                onClick={() => openLightbox(index)}
-                className="group relative overflow-hidden rounded-xl bg-gray-200 dark:bg-gray-700 cursor-pointer
-                           shadow-lg ring-1 ring-black/5 dark:ring-white/10
-                           transition-all duration-300 transform hover:-translate-y-1 hover:shadow-xl"
-              >
-                <div className="aspect-[3/4] w-full">
-                  <OptimizedImage
-                    src={photo.photo_url}
-                    alt={`${albumTitle} - Foto ${index + 1}`}
-                    loading="lazy"
-                    decoding="async"
-                    variant="thumb"
-                    widths={[400, 800, 1200]}
-                    sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
-                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-                  />
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {photos.map((photo, index) => (
+                <div
+                  key={photo.id}
+                  onClick={() => openLightbox(index)}
+                  className="group relative overflow-hidden rounded-xl bg-gray-200 dark:bg-gray-700 cursor-pointer shadow-lg ring-1 ring-black/5 dark:ring-white/10 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-xl"
+                >
+                  <div className="aspect-[3/4] w-full">
+                    <OptimizedImage
+                      src={photo.photo_url}
+                      alt={`${albumTitle} - Foto ${index + 1}`}
+                      loading="lazy"
+                      decoding="async"
+                      variant="thumb"
+                      widths={[400, 800, 1200]}
+                      sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                    />
+                  </div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 </div>
-                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              ))}
+            </div>
+
+            {hasMore && (
+              <div className="flex justify-center mt-10">
+                <button
+                  type="button"
+                  onClick={() => void loadMore()}
+                  disabled={loadingMore}
+                  className="px-6 py-3 rounded-lg bg-purple-600 text-white hover:bg-purple-500 transition-colors disabled:opacity-60"
+                >
+                  {loadingMore ? 'Carregando...' : 'Carregar mais'}
+                </button>
               </div>
-            ))}
-          </div>
+            )}
+          </>
         )}
       </div>
 
@@ -146,7 +248,7 @@ export default function AlbumViewer({ albumId, albumTitle, onClose }: AlbumViewe
 
             <div className="absolute top-2 left-2 md:top-6 md:left-6 text-white bg-black/60 rounded-lg px-4 py-2 backdrop-blur-sm">
               <span className="text-sm md:text-base">
-                {currentIndex + 1} / {photos.length}
+                {currentIndex + 1} / {counterTotal}
               </span>
             </div>
 
@@ -183,6 +285,19 @@ export default function AlbumViewer({ albumId, albumTitle, onClose }: AlbumViewe
                 </button>
               )}
             </div>
+
+            {hasMore && currentIndex === photos.length - 1 && (
+              <div className="mt-6">
+                <button
+                  type="button"
+                  onClick={() => void loadMore()}
+                  disabled={loadingMore}
+                  className="px-6 py-3 rounded-lg bg-purple-600 text-white hover:bg-purple-500 transition-colors disabled:opacity-60"
+                >
+                  {loadingMore ? 'Carregando...' : 'Carregar mais fotos'}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
