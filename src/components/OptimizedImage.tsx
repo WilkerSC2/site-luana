@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from 'react';
+import type React from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   getSupabasePublicVariantUrl,
   getSupabaseRenderUrl,
@@ -12,6 +13,7 @@ type OptimizedImageProps = Omit<React.ImgHTMLAttributes<HTMLImageElement>, 'src'
   quality?: number;
   format?: SupabaseImageFormat;
   variant?: 'thumb' | 'display';
+  preferRender?: boolean;
 };
 
 const transformsEnabled =
@@ -24,39 +26,52 @@ export default function OptimizedImage({
   quality = 70,
   format = 'webp',
   variant,
+  preferRender = false,
   sizes,
   onError,
   style,
   className,
   ...imgProps
 }: OptimizedImageProps) {
-  const [mode, setMode] = useState<'primary' | 'fallback'>('primary');
+  type Mode = 'render' | 'variant' | 'fallback';
 
-  const primary = useMemo(() => {
-    if (mode !== 'primary') return null;
+  const variantUrl = useMemo(() => {
+    if (!variant) return null;
+    return getSupabasePublicVariantUrl(src, variant);
+  }, [src, variant]);
 
-    if (transformsEnabled) {
-      const maxWidth = Math.max(...widths);
-      return getSupabaseRenderUrl(src, { width: maxWidth, quality, format });
-    }
+  const renderUrl = useMemo(() => {
+    const maxWidth = Math.max(...widths);
+    return getSupabaseRenderUrl(src, { width: maxWidth, quality, format });
+  }, [format, quality, src, widths]);
 
-    if (variant) {
-      return getSupabasePublicVariantUrl(src, variant);
-    }
+  const initialMode = useMemo<Mode>(() => {
+    if ((transformsEnabled || preferRender) && renderUrl) return 'render';
+    if (variantUrl) return 'variant';
+    return 'fallback';
+  }, [preferRender, renderUrl, variantUrl]);
 
-    return null;
-  }, [format, mode, quality, src, variant, widths]);
+  const [mode, setMode] = useState<Mode>(initialMode);
+
+  useEffect(() => {
+    setMode(initialMode);
+  }, [initialMode]);
 
   const srcSet = useMemo(() => {
-    if (mode !== 'primary') return undefined;
-    if (!transformsEnabled) return undefined;
+    if (mode !== 'render') return undefined;
     return getSupabaseSrcSet(src, widths, { quality, format }) ?? undefined;
   }, [format, mode, quality, src, widths]);
+
+  const resolvedSrc = useMemo(() => {
+    if (mode === 'render') return renderUrl ?? src;
+    if (mode === 'variant') return variantUrl ?? src;
+    return src;
+  }, [mode, renderUrl, src, variantUrl]);
 
   return (
     <img
       {...imgProps}
-      src={primary ?? src}
+      src={resolvedSrc}
       srcSet={srcSet}
       sizes={srcSet ? sizes : undefined}
       className={className}
@@ -68,7 +83,13 @@ export default function OptimizedImage({
         ...style,
       }}
       onError={(e) => {
-        setMode('fallback');
+        if (mode === 'render' && variantUrl) {
+          setMode('variant');
+          return;
+        }
+        if (mode !== 'fallback') {
+          setMode('fallback');
+        }
         onError?.(e);
       }}
     />

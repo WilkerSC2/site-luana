@@ -29,6 +29,7 @@ export default function AlbumViewer({ albumId, albumTitle, onClose }: AlbumViewe
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [lightboxDisplayLoaded, setLightboxDisplayLoaded] = useState(false);
 
   useEffect(() => {
     latestAlbumIdRef.current = albumId;
@@ -137,9 +138,15 @@ export default function AlbumViewer({ albumId, albumTitle, onClose }: AlbumViewe
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [currentIndex, hasMore, isLightboxOpen, loadMore, loadingMore, photos.length]);
 
+  useEffect(() => {
+    if (!isLightboxOpen) return;
+    setLightboxDisplayLoaded(false);
+  }, [currentIndex, isLightboxOpen]);
+
   const openLightbox = (index: number) => {
     setCurrentIndex(index);
     setIsLightboxOpen(true);
+    setLightboxDisplayLoaded(false);
   };
 
   const nextPhoto = () => {
@@ -252,17 +259,38 @@ export default function AlbumViewer({ albumId, albumTitle, onClose }: AlbumViewe
               </span>
             </div>
 
-            <OptimizedImage
-              src={photos[currentIndex].photo_url}
-              alt={`${albumTitle} - Foto ${currentIndex + 1}`}
-              loading="eager"
-              decoding="async"
-              variant="display"
-              widths={[1200, 1600, 2000]}
-              sizes="100vw"
-              quality={85}
-              className="max-w-full max-h-[80vh] object-contain"
-            />
+            <div className="relative w-full max-w-[95vw] h-[80vh]">
+              <OptimizedImage
+                src={photos[currentIndex].photo_url}
+                alt={`${albumTitle} - Foto ${currentIndex + 1}`}
+                loading="eager"
+                decoding="async"
+                variant="thumb"
+                widths={[600, 900, 1200]}
+                sizes="100vw"
+                quality={70}
+                className={`absolute inset-0 w-full h-full object-contain transition-opacity duration-300 ${
+                  lightboxDisplayLoaded ? 'opacity-0' : 'opacity-100'
+                }`}
+              />
+              <OptimizedImage
+                src={photos[currentIndex].photo_url}
+                alt={`${albumTitle} - Foto ${currentIndex + 1}`}
+                loading="eager"
+                decoding="async"
+                preferRender
+                variant="display"
+                widths={[1200, 1600, 2000]}
+                sizes="100vw"
+                quality={85}
+                // @ts-expect-error fetchPriority is supported in modern browsers but may not exist in older TS DOM typings
+                fetchPriority="high"
+                onLoad={() => setLightboxDisplayLoaded(true)}
+                className={`absolute inset-0 w-full h-full object-contain transition-opacity duration-300 ${
+                  lightboxDisplayLoaded ? 'opacity-100' : 'opacity-0'
+                }`}
+              />
+            </div>
 
             <div className="flex w-full justify-center items-center mt-4 md:mt-0 md:absolute md:top-1/2 md:left-0 md:right-0 md:justify-between md:-translate-y-1/2">
               {currentIndex > 0 && (
