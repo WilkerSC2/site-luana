@@ -97,7 +97,17 @@ export default function Admin() {
     setUploading(true);
 
     try {
-      let imageUrl = uploadForm.image_url;
+      let imageUrl = uploadForm.image_url?.trim() ?? '';
+
+      if (uploadMethod === 'url' && !imageUrl) {
+        alert('Informe a URL da imagem.');
+        return;
+      }
+
+      if (uploadMethod === 'file' && !imageFile && !imageUrl && !editingImage) {
+        alert('Selecione um arquivo de imagem.');
+        return;
+      }
 
       if (uploadMethod === 'file' && imageFile) {
         imageUrl = await uploadImage(imageFile, 'portfolio');
@@ -122,15 +132,32 @@ export default function Admin() {
           setImageFile(null);
         }
       } else {
-        const { error } = await supabase.from('portfolio_images').insert([
-          {
-            title: uploadForm.title,
-            description: uploadForm.description,
-            image_url: imageUrl,
-            category: uploadForm.category,
-            order_index: images.length,
-          },
-        ]);
+        const singletonCategories = new Set(['hero', 'about']);
+        const existingSingleton = singletonCategories.has(uploadForm.category)
+          ? images
+              .filter((img) => img.category === uploadForm.category)
+              .sort((a, b) => b.order_index - a.order_index)[0] ?? null
+          : null;
+
+        const { error } = existingSingleton
+          ? await supabase
+              .from('portfolio_images')
+              .update({
+                title: uploadForm.title,
+                description: uploadForm.description,
+                image_url: imageUrl,
+                category: uploadForm.category,
+              })
+              .eq('id', existingSingleton.id)
+          : await supabase.from('portfolio_images').insert([
+              {
+                title: uploadForm.title,
+                description: uploadForm.description,
+                image_url: imageUrl,
+                category: uploadForm.category,
+                order_index: images.length,
+              },
+            ]);
 
         if (!error) {
           loadImages();
@@ -164,6 +191,31 @@ export default function Admin() {
       description: image.description || '',
       image_url: image.image_url,
       category: image.category,
+    });
+    setShowUploadModal(true);
+  };
+
+  const getLatestByCategory = (category: string) =>
+    images
+      .filter((img) => img.category === category)
+      .sort((a, b) => b.order_index - a.order_index)[0] ?? null;
+
+  const openSiteImage = (category: 'hero' | 'about') => {
+    setUploadMethod('file');
+    setImageFile(null);
+
+    const existing = getLatestByCategory(category);
+    if (existing) {
+      handleEdit(existing);
+      return;
+    }
+
+    setEditingImage(null);
+    setUploadForm({
+      title: category === 'hero' ? 'Hero' : 'Sobre mim',
+      description: '',
+      image_url: '',
+      category,
     });
     setShowUploadModal(true);
   };
@@ -266,6 +318,22 @@ export default function Admin() {
               <div className="flex items-center gap-3">
                 <button
                   type="button"
+                  onClick={() => openSiteImage('hero')}
+                  className="flex items-center gap-2 px-4 py-3 bg-white text-gray-800 rounded-lg hover:bg-gray-50 transition-colors border border-gray-200"
+                >
+                  <Upload size={18} />
+                  Trocar Hero
+                </button>
+                <button
+                  type="button"
+                  onClick={() => openSiteImage('about')}
+                  className="flex items-center gap-2 px-4 py-3 bg-white text-gray-800 rounded-lg hover:bg-gray-50 transition-colors border border-gray-200"
+                >
+                  <Upload size={18} />
+                  Trocar Sobre Mim
+                </button>
+                <button
+                  type="button"
                   onClick={generatePortfolioVariants}
                   disabled={generatingVariants || loading || images.length === 0}
                   className="flex items-center gap-2 px-4 py-3 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-60"
@@ -318,6 +386,7 @@ export default function Admin() {
                     alt={image.title}
                     loading="lazy"
                     decoding="async"
+                    style={{ color: 'transparent', fontSize: 0 }}
                     className="w-full h-full object-cover"
                   />
                 </div>
@@ -438,7 +507,6 @@ export default function Admin() {
                     type="url"
                     value={uploadForm.image_url}
                     onChange={(e) => setUploadForm({ ...uploadForm, image_url: e.target.value })}
-                    required
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     placeholder="https://exemplo.com/imagem.jpg"
                   />
@@ -448,7 +516,6 @@ export default function Admin() {
                       type="file"
                       accept="image/*"
                       onChange={(e) => setImageFile(e.target.files?.[0] || null)}
-                      required
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     />
                     {imageFile && (
@@ -470,6 +537,7 @@ export default function Admin() {
                   <option value="portfolio">Portfolio</option>
                   <option value="before-after">Antes e Depois</option>
                   <option value="hero">Hero/Banner</option>
+                  <option value="about">Sobre mim</option>
                 </select>
               </div>
 

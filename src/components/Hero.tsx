@@ -1,8 +1,36 @@
-import React from 'react';
+import { useEffect, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import TypingEffect from './TypingEffect';
+import { supabase } from '../lib/supabase';
+import OptimizedImage from './OptimizedImage';
 
 const Hero = () => {
+  const fallbackUrl = 'https://g5vcbby14l69mxgk.public.blob.vercel-storage.com/Fotos_Ibira/TesteLuana.webp';
+  const [heroImageUrl, setHeroImageUrl] = useState<string>(fallbackUrl);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const load = async () => {
+      const { data, error } = await supabase
+        .from('portfolio_images')
+        .select('image_url')
+        .eq('category', 'hero')
+        .order('order_index', { ascending: false })
+        .limit(1);
+
+      if (cancelled) return;
+      if (!error && data && data[0]?.image_url) {
+        setHeroImageUrl(data[0].image_url);
+      }
+    };
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const scrollToPortfolio = () => {
     const element = document.getElementById('portfolio');
     if (element) {
@@ -15,12 +43,15 @@ const Hero = () => {
       id="home"
       className="relative min-h-screen flex items-center justify-center overflow-hidden"
     >
-      <img
-        src="https://g5vcbby14l69mxgk.public.blob.vercel-storage.com/Fotos_Ibira/TesteLuana.webp"
+      <OptimizedImage
+        src={heroImageUrl}
         alt=""
         aria-hidden="true"
         loading="eager"
         decoding="async"
+        variant="display"
+        widths={[1200, 1600, 2000, 2400]}
+        sizes="100vw"
         className="absolute inset-0 w-full h-full object-cover"
         style={{ objectPosition: 'center 45%' }}
       />

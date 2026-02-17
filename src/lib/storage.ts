@@ -44,9 +44,7 @@ async function decodeImage(file: File): Promise<DecodedImage> {
   }
 }
 
-async function createWebpVariant(file: File, maxSize: number, quality: number): Promise<Blob> {
-  const decoded = await decodeImage(file);
-
+async function createWebpVariantFromDecoded(decoded: DecodedImage, maxSize: number, quality: number): Promise<Blob> {
   const srcWidth = decoded.width;
   const srcHeight = decoded.height;
   const longEdge = Math.max(srcWidth, srcHeight);
@@ -61,12 +59,10 @@ async function createWebpVariant(file: File, maxSize: number, quality: number): 
 
   const ctx = canvas.getContext('2d');
   if (!ctx) {
-    decoded.close?.();
     throw new Error('Canvas context not available');
   }
 
   decoded.draw(ctx, targetWidth, targetHeight);
-  decoded.close?.();
 
   const blob: Blob = await new Promise((resolve, reject) => {
     canvas.toBlob(
@@ -89,49 +85,100 @@ async function urlExists(url: string): Promise<boolean> {
 }
 
 export async function uploadImage(file: File, folder: string = 'images'): Promise<string> {
-  const fileExt = file.name.split('.').pop();
-  const fileName = `${folder}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+  const baseName = `${folder}/${Date.now()}-${Math.random().toString(36).substring(7)}`;
+  const webpPath = `${baseName}.webp`;
 
-  const { data, error } = await supabase.storage
-    .from('portfolio-images')
-    .upload(fileName, file, {
+  // Preferred path: convert uploads to WebP before sending to storage.
+  try {
+    const decoded = await decodeImage(file);
+    try {
+      const [mainBlob, thumbBlob, displayBlob] = await Promise.all([
+        createWebpVariantFromDecoded(decoded, 2400, 0.86),
+        createWebpVariantFromDecoded(decoded, 900, 0.72),
+        createWebpVariantFromDecoded(decoded, 1800, 0.82),
+      ]);
+
+      const { data, error } = await supabase.storage.from('portfolio-images').upload(webpPath, mainBlob, {
+        cacheControl: '31536000',
+        contentType: 'image/webp',
+        upsert: false,
+      });
+
+      if (error) {
+        throw new Error(`Upload failed: ${error.message}`);
+      }
+
+      // Best-effort thumbnail + display variants (for performance).
+      await Promise.allSettled([
+        supabase.storage.from('portfolio-images').upload(replaceExtensionWithSuffix(webpPath, 'thumb'), thumbBlob, {
+          cacheControl: '31536000',
+          contentType: 'image/webp',
+          upsert: true,
+        }),
+        supabase.storage.from('portfolio-images').upload(replaceExtensionWithSuffix(webpPath, 'display'), displayBlob, {
+          cacheControl: '31536000',
+          contentType: 'image/webp',
+          upsert: true,
+        }),
+      ]);
+
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from('portfolio-images').getPublicUrl(data.path);
+
+      return publicUrl;
+    } finally {
+      decoded.close?.();
+    }
+  } catch {
+    // Fallback path: upload original as-is (keeps the app working even if WebP encoding fails).
+    const fileExt = file.name.split('.').pop() || 'jpg';
+    const fileName = `${baseName}.${fileExt}`;
+
+    const { data, error } = await supabase.storage.from('portfolio-images').upload(fileName, file, {
       cacheControl: '31536000',
       contentType: file.type || undefined,
-      upsert: false
+      upsert: false,
     });
 
-  if (error) {
-    throw new Error(`Upload failed: ${error.message}`);
+    if (error) {
+      throw new Error(`Upload failed: ${error.message}`);
+    }
+
+    // Best-effort variants.
+    try {
+      const decoded = await decodeImage(file);
+      try {
+        const [thumbBlob, displayBlob] = await Promise.all([
+          createWebpVariantFromDecoded(decoded, 900, 0.72),
+          createWebpVariantFromDecoded(decoded, 1800, 0.82),
+        ]);
+
+        await Promise.allSettled([
+          supabase.storage.from('portfolio-images').upload(replaceExtensionWithSuffix(fileName, 'thumb'), thumbBlob, {
+            cacheControl: '31536000',
+            contentType: 'image/webp',
+            upsert: true,
+          }),
+          supabase.storage.from('portfolio-images').upload(replaceExtensionWithSuffix(fileName, 'display'), displayBlob, {
+            cacheControl: '31536000',
+            contentType: 'image/webp',
+            upsert: true,
+          }),
+        ]);
+      } finally {
+        decoded.close?.();
+      }
+    } catch {
+      // ignore
+    }
+
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from('portfolio-images').getPublicUrl(data.path);
+
+    return publicUrl;
   }
-
-  // Best-effort thumbnail + display variants (for performance). If it fails, keep original URL.
-  try {
-    const thumbBlob = await createWebpVariant(file, 900, 0.72);
-    const displayBlob = await createWebpVariant(file, 1800, 0.82);
-
-    const thumbPath = replaceExtensionWithSuffix(fileName, 'thumb');
-    const displayPath = replaceExtensionWithSuffix(fileName, 'display');
-
-    await supabase.storage.from('portfolio-images').upload(thumbPath, thumbBlob, {
-      cacheControl: '31536000',
-      contentType: 'image/webp',
-      upsert: true,
-    });
-
-    await supabase.storage.from('portfolio-images').upload(displayPath, displayBlob, {
-      cacheControl: '31536000',
-      contentType: 'image/webp',
-      upsert: true,
-    });
-  } catch {
-    // ignore
-  }
-
-  const { data: { publicUrl } } = supabase.storage
-    .from('portfolio-images')
-    .getPublicUrl(data.path);
-
-  return publicUrl;
 }
 
 export async function ensureImageVariants(publicUrl: string): Promise<{ thumb: boolean; display: boolean }> {
@@ -157,22 +204,27 @@ export async function ensureImageVariants(publicUrl: string): Promise<{ thumb: b
   const file = new File([blob], 'image', { type: blob.type || 'image/jpeg' });
 
   try {
-    if (!thumbExists) {
-      const thumbBlob = await createWebpVariant(file, 900, 0.72);
-      await supabase.storage.from('portfolio-images').upload(thumbPath, thumbBlob, {
-        cacheControl: '31536000',
-        contentType: 'image/webp',
-        upsert: true,
-      });
-    }
+    const decoded = await decodeImage(file);
+    try {
+      if (!thumbExists) {
+        const thumbBlob = await createWebpVariantFromDecoded(decoded, 900, 0.72);
+        await supabase.storage.from('portfolio-images').upload(thumbPath, thumbBlob, {
+          cacheControl: '31536000',
+          contentType: 'image/webp',
+          upsert: true,
+        });
+      }
 
-    if (!displayExists) {
-      const displayBlob = await createWebpVariant(file, 1800, 0.82);
-      await supabase.storage.from('portfolio-images').upload(displayPath, displayBlob, {
-        cacheControl: '31536000',
-        contentType: 'image/webp',
-        upsert: true,
-      });
+      if (!displayExists) {
+        const displayBlob = await createWebpVariantFromDecoded(decoded, 1800, 0.82);
+        await supabase.storage.from('portfolio-images').upload(displayPath, displayBlob, {
+          cacheControl: '31536000',
+          contentType: 'image/webp',
+          upsert: true,
+        });
+      }
+    } finally {
+      decoded.close?.();
     }
   } catch {
     // ignore

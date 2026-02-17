@@ -1,7 +1,33 @@
-
+import { useEffect, useState } from 'react';
+import { supabase } from '../lib/supabase';
 import OptimizedImage from './OptimizedImage';
 
 const About = () => {
+  const fallbackUrl = 'https://g5vcbby14l69mxgk.public.blob.vercel-storage.com/Fotos_Ibira/SobreMim.webp';
+  const [aboutImageUrl, setAboutImageUrl] = useState<string>(fallbackUrl);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const load = async () => {
+      const { data, error } = await supabase
+        .from('portfolio_images')
+        .select('image_url')
+        .eq('category', 'about')
+        .order('order_index', { ascending: false })
+        .limit(1);
+
+      if (cancelled) return;
+      if (!error && data && data[0]?.image_url) {
+        setAboutImageUrl(data[0].image_url);
+      }
+    };
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <section id="about" className="py-20 bg-gray-50 dark:bg-[#181622] transition-colors duration-300">
@@ -11,10 +37,11 @@ const About = () => {
           <div className="relative">
             <div className="aspect-[4/5] overflow-hidden bg-gray-100 dark:bg-gray-700 rounded-lg shadow-xl">
               <OptimizedImage
-                src="https://g5vcbby14l69mxgk.public.blob.vercel-storage.com/Fotos_Ibira/SobreMim.webp"
+                src={aboutImageUrl}
                 alt="Sobre o fotógrafo"
                 loading="lazy"
                 decoding="async"
+                variant="display"
                 widths={[400, 800, 1200]}
                 sizes="(min-width: 1024px) 50vw, 100vw"
                 className="w-full h-full object-cover rounded-lg"

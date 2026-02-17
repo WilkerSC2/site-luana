@@ -26,6 +26,8 @@ export default function OptimizedImage({
   variant,
   sizes,
   onError,
+  style,
+  className,
   ...imgProps
 }: OptimizedImageProps) {
   const [mode, setMode] = useState<'primary' | 'fallback'>('primary');
@@ -57,6 +59,14 @@ export default function OptimizedImage({
       src={primary ?? src}
       srcSet={srcSet}
       sizes={srcSet ? sizes : undefined}
+      className={className}
+      style={{
+        // Prevents the browser from briefly painting `alt` text (often the filename/title)
+        // while the image is still loading.
+        color: 'transparent',
+        fontSize: 0,
+        ...style,
+      }}
       onError={(e) => {
         setMode('fallback');
         onError?.(e);

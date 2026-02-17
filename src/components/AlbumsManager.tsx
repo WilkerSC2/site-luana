@@ -352,6 +352,7 @@ export default function AlbumsManager() {
                         alt={album.title}
                         loading="lazy"
                         decoding="async"
+                        style={{ color: 'transparent', fontSize: 0 }}
                         className="w-full h-full object-cover"
                       />
                     </div>
@@ -446,6 +447,7 @@ export default function AlbumsManager() {
                         alt="Album photo"
                         loading="lazy"
                         decoding="async"
+                        style={{ color: 'transparent', fontSize: 0 }}
                         className="w-full h-full object-cover"
                       />
                     </div>
