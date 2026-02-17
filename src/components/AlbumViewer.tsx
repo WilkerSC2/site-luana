@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, ChevronLeft, ChevronRight, ArrowLeft } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import OptimizedImage from './OptimizedImage';
 
 interface AlbumPhoto {
   id: string;
@@ -47,7 +48,7 @@ export default function AlbumViewer({ albumId, albumTitle, onClose }: AlbumViewe
     setLoading(true);
     const { data, error } = await supabase
       .from('album_photos')
-      .select('*')
+      .select('id,photo_url,order_index')
       .eq('album_id', albumId)
       .order('order_index', { ascending: true });
 
@@ -114,9 +115,14 @@ export default function AlbumViewer({ albumId, albumTitle, onClose }: AlbumViewe
                            transition-all duration-300 transform hover:-translate-y-1 hover:shadow-xl"
               >
                 <div className="aspect-[3/4] w-full">
-                  <img
+                  <OptimizedImage
                     src={photo.photo_url}
                     alt={`${albumTitle} - Foto ${index + 1}`}
+                    loading="lazy"
+                    decoding="async"
+                    variant="thumb"
+                    widths={[400, 800, 1200]}
+                    sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
                     className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
                   />
                 </div>
@@ -144,9 +150,15 @@ export default function AlbumViewer({ albumId, albumTitle, onClose }: AlbumViewe
               </span>
             </div>
 
-            <img
+            <OptimizedImage
               src={photos[currentIndex].photo_url}
               alt={`${albumTitle} - Foto ${currentIndex + 1}`}
+              loading="eager"
+              decoding="async"
+              variant="display"
+              widths={[1200, 1600, 2000]}
+              sizes="100vw"
+              quality={85}
               className="max-w-full max-h-[80vh] object-contain"
             />
 

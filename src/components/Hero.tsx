@@ -14,16 +14,17 @@ const Hero = () => {
     <section
       id="home"
       className="relative min-h-screen flex items-center justify-center overflow-hidden"
-      style={{
-        backgroundImage:
-          "linear-gradient(rgba(60, 26, 123, 0.4), rgba(0, 0, 0, 0.5)), url('https://g5vcbby14l69mxgk.public.blob.vercel-storage.com/Fotos_Ibira/TesteLuana.webp')",
-        backgroundSize: "cover",
-        backgroundPosition: "center top 45%",
-        backgroundRepeat: "no-repeat",
-        width: "100%",
-        minHeight: "100vh"
-      }}
     >
+      <img
+        src="https://g5vcbby14l69mxgk.public.blob.vercel-storage.com/Fotos_Ibira/TesteLuana.webp"
+        alt=""
+        aria-hidden="true"
+        loading="eager"
+        decoding="async"
+        className="absolute inset-0 w-full h-full object-cover"
+        style={{ objectPosition: 'center 45%' }}
+      />
+      <div className="absolute inset-0 bg-gradient-to-b from-[#3c1a7b]/40 via-black/30 to-black/50" />
       <div className="relative z-10 flex items-center justify-center h-full text-center text-white px-6">
         <div className="max-w-4xl">
           <h1 className="text-5xl md:text-7xl lg:text-8xl font-light mb-6 leading-tight">

@@ -1,4 +1,6 @@
 
+import OptimizedImage from './OptimizedImage';
+
 const About = () => {
 
   return (
@@ -8,9 +10,13 @@ const About = () => {
                     
           <div className="relative">
             <div className="aspect-[4/5] overflow-hidden bg-gray-100 dark:bg-gray-700 rounded-lg shadow-xl">
-              <img
+              <OptimizedImage
                 src="https://g5vcbby14l69mxgk.public.blob.vercel-storage.com/Fotos_Ibira/SobreMim.webp"
                 alt="Sobre o fotógrafo"
+                loading="lazy"
+                decoding="async"
+                widths={[400, 800, 1200]}
+                sizes="(min-width: 1024px) 50vw, 100vw"
                 className="w-full h-full object-cover rounded-lg"
               />
             </div>

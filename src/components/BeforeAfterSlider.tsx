@@ -1,4 +1,5 @@
 import React, { useRef, useState, ChangeEvent } from 'react';
+import OptimizedImage from './OptimizedImage';
 
 interface BeforeAfterSliderProps {
   beforeSrc: string;
@@ -26,16 +27,26 @@ const BeforeAfterSlider: React.FC<BeforeAfterSliderProps> = ({ beforeSrc, afterS
       </div>
       <div ref={containerRef} className="relative w-[92vw] mx-auto h-[40vw] max-h-[900px] min-h-[340px] bg-gray-100 dark:bg-gray-800 rounded-2xl overflow-hidden shadow-2xl">
         {/* Before Image */}
-        <img
+        <OptimizedImage
           src={beforeSrc}
           alt={beforeLabel}
+          loading="lazy"
+          decoding="async"
+          variant="display"
+          widths={[800, 1200, 1600, 2000]}
+          sizes="92vw"
           className="absolute inset-0 w-full h-full object-cover"
           style={{ clipPath: `inset(0 ${100-sliderPos}% 0 0)` }}
         />
         {/* After Image */}
-        <img
+        <OptimizedImage
           src={afterSrc}
           alt={afterLabel}
+          loading="lazy"
+          decoding="async"
+          variant="display"
+          widths={[800, 1200, 1600, 2000]}
+          sizes="92vw"
           className="absolute inset-0 w-full h-full object-cover"
           style={{ clipPath: `inset(0 0 0 ${sliderPos}%)` }}
         />

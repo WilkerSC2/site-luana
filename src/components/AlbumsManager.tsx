@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Upload, X, Edit2, Trash2, Plus, Image as ImageIcon, Link } from 'lucide-react';
-import { uploadImage } from '../lib/storage';
+import { ensureImageVariants, uploadImage } from '../lib/storage';
 
 interface Album {
   id: string;
@@ -39,6 +39,8 @@ export default function AlbumsManager() {
   const [uploading, setUploading] = useState(false);
   const [draggedPhotoId, setDraggedPhotoId] = useState<string | null>(null);
   const [draggedAlbumId, setDraggedAlbumId] = useState<string | null>(null);
+  const [generatingVariants, setGeneratingVariants] = useState(false);
+  const [variantsProgress, setVariantsProgress] = useState<{ done: number; total: number } | null>(null);
 
   useEffect(() => {
     loadAlbums();
@@ -54,7 +56,7 @@ export default function AlbumsManager() {
     setLoading(true);
     const { data, error } = await supabase
       .from('albums')
-      .select('*')
+      .select('id,title,cover_image_url,order_index')
       .order('order_index', { ascending: true });
 
     if (!error && data) {
@@ -66,12 +68,46 @@ export default function AlbumsManager() {
   const loadPhotos = async (albumId: string) => {
     const { data, error } = await supabase
       .from('album_photos')
-      .select('*')
+      .select('id,album_id,photo_url,order_index')
       .eq('album_id', albumId)
       .order('order_index', { ascending: true });
 
     if (!error && data) {
       setPhotos(data);
+    }
+  };
+
+  const generateSelectedAlbumVariants = async () => {
+    if (generatingVariants) return;
+    if (!selectedAlbumId) return;
+
+    if (!confirm('Isso vai gerar miniaturas (thumb/display) no Supabase para as fotos deste álbum. Continuar?')) {
+      return;
+    }
+
+    setGeneratingVariants(true);
+
+    const selectedAlbum = albums.find((a) => a.id === selectedAlbumId);
+    const urls = [
+      selectedAlbum?.cover_image_url,
+      ...photos.map((p) => p.photo_url),
+    ].filter(Boolean) as string[];
+
+    const candidates = urls.filter((url) => url.includes('/storage/v1/object/public/portfolio-images/'));
+    setVariantsProgress({ done: 0, total: candidates.length });
+
+    try {
+      for (let i = 0; i < candidates.length; i++) {
+        await ensureImageVariants(candidates[i]);
+        setVariantsProgress({ done: i + 1, total: candidates.length });
+      }
+      alert('Miniaturas geradas.');
+    } catch (error) {
+      console.error(error);
+      alert('Falha ao gerar miniaturas. Veja o console.');
+    } finally {
+      setGeneratingVariants(false);
+      setTimeout(() => setVariantsProgress(null), 1500);
     }
   };
 
@@ -314,6 +350,8 @@ export default function AlbumsManager() {
                       <img
                         src={album.cover_image_url}
                         alt={album.title}
+                        loading="lazy"
+                        decoding="async"
                         className="w-full h-full object-cover"
                       />
                     </div>
@@ -355,15 +393,33 @@ export default function AlbumsManager() {
               {selectedAlbumId ? `Fotos do Álbum (${photos.length})` : 'Selecione um álbum'}
             </h3>
             {selectedAlbumId && (
-              <button
-                onClick={() => setShowPhotoModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
-              >
-                <Plus size={16} />
-                Adicionar Foto
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={generateSelectedAlbumVariants}
+                  disabled={generatingVariants || photos.length === 0}
+                  className="flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 transition-colors text-sm disabled:opacity-60"
+                >
+                  <ImageIcon size={16} />
+                  {generatingVariants ? 'Gerando...' : 'Gerar Miniaturas'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowPhotoModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+                >
+                  <Plus size={16} />
+                  Adicionar Foto
+                </button>
+              </div>
             )}
           </div>
+
+          {variantsProgress && (
+            <p className="text-sm text-gray-600 mb-4">
+              Miniaturas: {variantsProgress.done}/{variantsProgress.total}
+            </p>
+          )}
 
           {selectedAlbumId ? (
             photos.length === 0 ? (
@@ -388,6 +444,8 @@ export default function AlbumsManager() {
                       <img
                         src={photo.photo_url}
                         alt="Album photo"
+                        loading="lazy"
+                        decoding="async"
                         className="w-full h-full object-cover"
                       />
                     </div>

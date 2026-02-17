@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { X, ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import OptimizedImage from './OptimizedImage';
 
 interface PortfolioImage {
   id: string;
@@ -27,7 +28,7 @@ const Portfolio = () => {
     setLoading(true);
     const { data, error } = await supabase
       .from('portfolio_images')
-      .select('*')
+      .select('id,title,image_url,category,order_index')
       .eq('category', 'portfolio')
       .order('order_index', { ascending: true })
       .limit(6);
@@ -102,8 +103,14 @@ const Portfolio = () => {
                          transition-all duration-300 transform hover:-translate-y-1 hover:scale-105 hover:shadow-[0_22px_48px_-12px_rgba(147,51,234,0.55)]"
             >
               <div className="aspect-[3/4] w-full">
-                <img
+                <OptimizedImage
                   src={image.src}
+                  alt={image.title}
+                  loading="lazy"
+                  decoding="async"
+                  variant="thumb"
+                  widths={[400, 800, 1200]}
+                  sizes="(min-width: 1280px) 33vw, (min-width: 768px) 50vw, 100vw"
                   className="w-full h-full object-cover select-none pointer-events-none transition-transform duration-300 group-hover:scale-110"
                   draggable={false}
                   onContextMenu={e => e.preventDefault()}
@@ -144,7 +151,17 @@ const Portfolio = () => {
               >
                 <X size={28} className="md:w-10 md:h-10 w-7 h-7" />
               </button>
-              <img src={selectedImage} alt="Portfolio Image" style={{ width: 'auto', height: 'auto', maxWidth: '100vw', maxHeight: '80vh' }} />
+              <OptimizedImage
+                src={selectedImage}
+                alt="Imagem do portfÃ³lio"
+                loading="eager"
+                decoding="async"
+                variant="display"
+                widths={[1200, 1600, 2000]}
+                sizes="100vw"
+                quality={85}
+                style={{ width: 'auto', height: 'auto', maxWidth: '100vw', maxHeight: '80vh' }}
+              />
               {/* Setas abaixo da imagem no mobile, laterais no desktop */}
               <div className="flex w-full justify-center items-center mt-4 md:mt-0 md:absolute md:top-1/2 md:left-0 md:right-0 md:justify-between">
                 {selectedIndex !== null && selectedIndex > 0 && (

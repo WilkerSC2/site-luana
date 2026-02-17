@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import AlbumViewer from '../components/AlbumViewer';
+import OptimizedImage from '../components/OptimizedImage';
 
 interface Album {
   id: string;
@@ -24,7 +25,7 @@ export default function Collections() {
     setLoading(true);
     const { data, error } = await supabase
       .from('albums')
-      .select('*')
+      .select('id,title,cover_image_url,order_index')
       .order('order_index', { ascending: true });
 
     if (!error && data) {
@@ -84,9 +85,14 @@ export default function Collections() {
                            transition-all duration-300 transform hover:-translate-y-2 hover:shadow-2xl hover:shadow-purple-500/30"
               >
                 <div className="aspect-[4/3] w-full">
-                  <img
+                  <OptimizedImage
                     src={album.cover_image_url}
                     alt={album.title}
+                    loading="lazy"
+                    decoding="async"
+                    variant="thumb"
+                    widths={[400, 800, 1200]}
+                    sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
                     className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
                   />
                 </div>
