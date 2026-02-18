@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase';
 import OptimizedImage from './OptimizedImage';
 
 const Hero = () => {
-  const fallbackUrl = 'https://g5vcbby14l69mxgk.public.blob.vercel-storage.com/Fotos_Ibira/TesteLuana.webp';
+  const fallbackUrl = 'https://edrijzuqbvvvxqnivkxb.supabase.co/storage/v1/object/public/portfolio-images/portfolio/1771361300100-hf5x3w.webp';
   const [heroImageUrl, setHeroImageUrl] = useState<string>(fallbackUrl);
 
   useEffect(() => {
