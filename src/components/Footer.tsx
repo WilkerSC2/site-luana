@@ -17,7 +17,7 @@ const Footer = () => {
               onClick={scrollToTop}
               className="text-3xl font-bold mb-4 cursor-pointer hover:text-purple-400 transition-colors inline-block"
             >
-              LC Filmsx
+              Leque Produções
             </div>
             <p className="text-gray-300 dark:text-gray-400 mb-6 max-w-md leading-relaxed">
               Fotógrafa profissional especializada em capturar momentos únicos e emocionantes. 
@@ -89,7 +89,7 @@ const Footer = () => {
         {/* Bottom Bar */}
         <div className="border-t border-gray-700 dark:border-gray-800 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
           <div className="text-gray-300 dark:text-gray-400 text-sm mb-4 md:mb-0">
-            © 2025 LC Filmsx. Todos os direitos reservados.
+            © 2025 Leque Produções. Todos os direitos reservados.
           </div>
           <div className="flex items-center text-gray-300 dark:text-gray-400 text-sm">
             <Camera className="w-4 h-4 mr-2" />

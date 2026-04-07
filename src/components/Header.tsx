@@ -38,7 +38,7 @@ const Header = () => {
             to="/"
             className="text-2xl font-bold text-gray-900 dark:text-white cursor-pointer hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
           >
-            LC Filmsx
+            Leque Produções
           </Link>
 
           {/* Desktop Menu & Theme Toggle */}
