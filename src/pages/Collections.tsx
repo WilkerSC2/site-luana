@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import AlbumViewer from '../components/AlbumViewer';
 import OptimizedImage from '../components/OptimizedImage';
+import { usePageSeo } from '../lib/seo';
 
 interface Album {
   id: string;
@@ -13,6 +14,13 @@ interface Album {
 }
 
 export default function Collections() {
+  usePageSeo({
+    title: 'Colecoes fotograficas',
+    description:
+      'Explore as colecoes fotograficas da Leque Producoes com albuns organizados por tema e projetos visuais de Luana Leque.',
+    path: '/collections',
+  });
+
   const [albums, setAlbums] = useState<Album[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedAlbumId, setSelectedAlbumId] = useState<string | null>(null);

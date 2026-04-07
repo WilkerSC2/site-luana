@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 import { LogOut, Upload, X, Edit2, Trash2, Link, Home } from 'lucide-react';
 import AlbumsManager from '../components/AlbumsManager';
 import { ensureImageVariants, uploadImage } from '../lib/storage';
+import { usePageSeo } from '../lib/seo';
 
 interface PortfolioImage {
   id: string;
@@ -16,6 +17,13 @@ interface PortfolioImage {
 }
 
 export default function Admin() {
+  usePageSeo({
+    title: 'Painel administrativo',
+    description: 'Painel interno de gestao de portfolio e albuns da Leque Producoes.',
+    path: '/admin',
+    robots: 'noindex, nofollow, noarchive',
+  });
+
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'portfolio' | 'albums'>('portfolio');

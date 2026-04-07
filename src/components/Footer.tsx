@@ -25,7 +25,7 @@ const Footer = () => {
             </p>
             <div className="flex space-x-4">
               <a
-                href="https://www.instagram.com/lc.filmsx/"
+                href="https://www.instagram.com/leque_producoes/"
                 className="text-gray-300 hover:text-purple-400 transition-colors p-2 bg-gray-800 dark:bg-gray-900 rounded-lg shadow-md hover:shadow-lg"
                 target="_blank"
                 rel="noopener noreferrer"

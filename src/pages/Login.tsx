@@ -1,8 +1,16 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { usePageSeo } from '../lib/seo';
 
 export default function Login() {
+  usePageSeo({
+    title: 'Login administrativo',
+    description: 'Area de acesso administrativo da Leque Producoes.',
+    path: '/login',
+    robots: 'noindex, nofollow, noarchive',
+  });
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
@@ -24,7 +32,7 @@ export default function Login() {
       } else {
         navigate('/admin');
       }
-    } catch (err) {
+    } catch {
       setError('Ocorreu um erro. Tente novamente.');
     } finally {
       setLoading(false);

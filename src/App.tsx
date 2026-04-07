@@ -4,6 +4,7 @@ import { SpeedInsights } from '@vercel/speed-insights/react';
 import { Analytics } from '@vercel/analytics/react';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider } from './contexts/AuthContext';
+import InstallAppButton from './components/InstallAppButton';
 
 const Home = lazy(() => import('./pages/Home'));
 const Collections = lazy(() => import('./pages/Collections'));
@@ -30,6 +31,7 @@ function App() {
                 <Route path="/admin" element={<Admin />} />
               </Routes>
             </Suspense>
+            <InstallAppButton />
             <SpeedInsights />
             <Analytics />
           </div>
