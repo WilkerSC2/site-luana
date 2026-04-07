@@ -10,14 +10,14 @@ import { siteConfig, usePageSeo } from '../lib/seo';
 
 export default function Home() {
   usePageSeo({
-    title: 'Fotografia e producao audiovisual em Sao Paulo',
+    title: 'Leque Produções',
     description:
       'Conheca o portfolio de Luana Leque com retratos, eventos, colecoes fotograficas e producao audiovisual em Sao Paulo.',
     path: '/',
     structuredData: {
       '@context': 'https://schema.org',
       '@type': 'ProfessionalService',
-      name: 'Leque Producoes',
+      name: 'Leque Produções',
       image: siteConfig.defaultImage,
       url: `${siteConfig.siteUrl}/`,
       description:

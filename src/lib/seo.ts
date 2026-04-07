@@ -3,10 +3,10 @@ import { useEffect } from 'react';
 const DEFAULT_SITE_URL = 'https://www.lequeproducoes.com.br';
 const DEFAULT_IMAGE_URL =
   'https://g5vcbby14l69mxgk.public.blob.vercel-storage.com/Fotos_Ibira/TesteLuana.webp';
-const TITLE_SUFFIX = 'Leque Producoes';
+const TITLE_SUFFIX = 'Leque Produções';
 
 export const siteConfig = {
-  siteName: 'Leque Producoes',
+  siteName: 'Leque Produções',
   siteUrl: normalizeSiteUrl(import.meta.env.VITE_SITE_URL || DEFAULT_SITE_URL),
   defaultImage: DEFAULT_IMAGE_URL,
   defaultTitle: 'Fotografia e producao audiovisual em Sao Paulo',
@@ -34,7 +34,11 @@ export function usePageSeo({
   structuredData,
 }: SeoConfig) {
   useEffect(() => {
-    const resolvedTitle = title ? `${title} | ${TITLE_SUFFIX}` : `${TITLE_SUFFIX} | ${siteConfig.defaultTitle}`;
+    const resolvedTitle = !title
+      ? `${TITLE_SUFFIX} | ${siteConfig.defaultTitle}`
+      : title === TITLE_SUFFIX
+        ? title
+        : `${title} | ${TITLE_SUFFIX}`;
     const canonicalUrl = buildCanonicalUrl(path);
 
     document.title = resolvedTitle;
