@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#140F1E" />
+    <title>Leque Produções | Offline</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        font-family: "Segoe UI", sans-serif;
+        background:
+          radial-gradient(circle at top, rgba(124, 58, 237, 0.35), transparent 45%),
+          linear-gradient(180deg, #140f1e, #09070f);
+        color: #fff;
+      }
+
+      main {
+        width: min(100%, 520px);
+        padding: 32px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 24px;
+        background: rgba(18, 15, 31, 0.86);
+        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+      }
+
+      h1 {
+        margin: 0 0 12px;
+        font-size: clamp(2rem, 5vw, 2.8rem);
+      }
+
+      p {
+        margin: 0 0 16px;
+        line-height: 1.6;
+        color: rgba(255, 255, 255, 0.82);
+      }
+
+      a {
+        display: inline-block;
+        margin-top: 8px;
+        padding: 12px 18px;
+        border-radius: 999px;
+        background: #7c3aed;
+        color: #fff;
+        text-decoration: none;
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Você está offline</h1>
+      <p>
+        Não foi possível carregar o site agora. Verifique sua conexão e tente novamente.
+      </p>
+      <a href="/">Tentar novamente</a>
+    </main>
+  </body>
+</html>
